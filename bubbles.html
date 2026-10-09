@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Bubbles of love 🫧</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,400;0,9..40,500;0,9..40,700;0,9..40,800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+  <script src="js/config.js"></script>
+  <script src="js/auth.js"></script>
+  <script>ZK.requireAccess();</script>
+</head>
+<body class="bubbles-page">
+  <div class="bg"></div>
+
+  <div class="bubbles-head">
+    <header class="topbar">
+      <a class="back" href="index.html">← Home</a>
+      <a class="back" href="album.html">📸 Album</a>
+    </header>
+    <p class="hint">Pop a bubble to read a message 🫧</p>
+    <p class="counter" id="counter"></p>
+  </div>
+
+  <div id="field" aria-label="Floating bubbles"></div>
+
+  <aside class="message" id="message" role="status" aria-live="polite">
+    <span class="msg-emoji" id="msgEmoji">💚</span>
+    <p id="msgText"></p>
+    <button class="close" id="msgClose" aria-label="Close message">✕</button>
+  </aside>
+
+  <script>
+    const field   = document.getElementById("field");
+    const box     = document.getElementById("message");
+    const msgText = document.getElementById("msgText");
+    const msgEmo  = document.getElementById("msgEmoji");
+    const counter = document.getElementById("counter");
+
+    const EMOJIS = ["💚","🌸","🎉","✨","🌈","🥂","🌻","🦋","☀️","🎈","🍀","💐","🫶","🌟","🥳","🍃","🎊","🧡","💙","🌷"];
+    const TINTS  = ["#72c6a8","#90abdc","#a9d18e","#c5e0b4","#ffc003","#fee598","#fff2cc","#f4b183","#b5c7e7","#d9d9d9"];
+
+    const rand = (a, b) => a + Math.random() * (b - a);
+    const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+    /* ---- Messages: a different one every click, no repeats until all were shown ---- */
+    let MESSAGES = ["Thank you for everything, Zaninka! 💚"];   // replaced by the decrypted messages
+    let queue = [];
+    let last = null;
+    const seen = new Set();
+
+    function nextMessage() {
+      if (!queue.length) {
+        queue = MESSAGES.slice().sort(() => Math.random() - 0.5);
+        if (queue.length > 1 && queue[queue.length - 1] === last) queue.unshift(queue.pop());
+      }
+      last = queue.pop();
+      seen.add(last);
+      return last;
+    }
+
+    function updateCounter() {
+      counter.textContent = seen.size
+        ? "Messages found: " + seen.size + " / " + MESSAGES.length
+        : "";
+    }
+
+    let hideTimer;
+    function showMessage(text, emoji) {
+      box.classList.remove("swap");
+      void box.offsetWidth;
+      msgText.textContent = text;
+      msgEmo.textContent = emoji;
+      box.classList.add("show", "swap");
+      updateCounter();
+      clearTimeout(hideTimer);
+      hideTimer = setTimeout(() => box.classList.remove("show"), 14000);
+    }
+    document.getElementById("msgClose").addEventListener("click", () => box.classList.remove("show"));
+
+    /* ---- Bubbles ---- */
+    function spawn(initial) {
+      const small = window.innerWidth < 600;
+      const size  = rand(small ? 64 : 76, small ? 108 : 132);
+      const dur   = rand(11, 20);
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "bubble";
+      b.dataset.emoji = pick(EMOJIS);
+      b.setAttribute("aria-label", "Pop this bubble");
+      b.style.setProperty("--size", size + "px");
+      b.style.setProperty("--dur", dur + "s");
+      b.style.setProperty("--sway", rand(2.5, 5) + "s");
+      b.style.setProperty("--delay", (initial ? -rand(0, dur) : -0.01) + "s");
+      b.style.setProperty("--tint", pick(TINTS));
+      b.style.left = rand(2, 100 - (size / window.innerWidth) * 100 - 4) + "%";
+      b.innerHTML = '<span class="inner">' + b.dataset.emoji + "</span>";
+      b.addEventListener("click", () => pop(b));
+      field.appendChild(b);
+    }
+
+    function pop(b) {
+      const r = b.getBoundingClientRect();
+      const tint = getComputedStyle(b).getPropertyValue("--tint");
+
+      // burst ghost where the bubble was
+      const g = document.createElement("div");
+      g.className = "ghost";
+      g.style.cssText = "left:" + r.left + "px;top:" + r.top + "px;width:" + r.width + "px;height:" + r.height + "px;--tint:" + tint;
+      document.body.appendChild(g);
+      setTimeout(() => g.remove(), 450);
+
+      // confetti
+      const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+      for (let i = 0; i < 12; i++) {
+        const s = document.createElement("div");
+        const ang = (Math.PI * 2 * i) / 12 + rand(-.2, .2), dist = rand(50, 110);
+        s.className = "spark";
+        s.style.cssText = "left:" + cx + "px;top:" + cy + "px;background:" + pick(TINTS) +
+          ";--dx:" + Math.cos(ang) * dist + "px;--dy:" + Math.sin(ang) * dist + "px";
+        document.body.appendChild(s);
+        setTimeout(() => s.remove(), 750);
+      }
+
+      showMessage(nextMessage(), b.dataset.emoji);
+      b.remove();
+      spawn(false);   // a new bubble starts rising from the bottom
+    }
+
+    // Decrypt the messages, then release the bubbles
+    (async () => {
+      const session = await ZK.requireSession();
+      if (!session) return;
+      if (session.manifest.messages && session.manifest.messages.length) MESSAGES = session.manifest.messages;
+      const count = window.innerWidth < 600 ? 9 : 15;
+      for (let i = 0; i < count; i++) spawn(true);
+    })();
+  </script>
+</body>
+</html>
