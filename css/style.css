@@ -431,32 +431,51 @@ body.bubbles-page { overflow: hidden; height: 100vh; height: 100dvh; }
 }
 @keyframes spark { to { transform: translate(var(--dx), var(--dy)) scale(.2); opacity: 0; } }
 
-/* Message card */
+/* Message card: centred on the screen */
 .message {
   position: fixed;
   z-index: 30;
   left: 50%;
-  bottom: max(18px, env(safe-area-inset-bottom));
-  transform: translate(-50%, 140%);
-  width: min(560px, calc(100vw - 28px));
-  padding: 22px 56px 22px 22px;
+  top: 50%;
+  width: min(640px, calc(100vw - 32px));
+  max-height: calc(100vh - 110px);
+  max-height: calc(100dvh - 110px);
+  overflow-y: auto;
+  padding: 36px 34px 26px;
   display: flex;
-  gap: 16px;
+  flex-direction: column;
   align-items: center;
-  text-align: left;
+  gap: 14px;
+  text-align: center;
   background: #fff;
-  border-radius: 26px;
-  box-shadow: 0 24px 60px -18px rgba(36, 69, 58, .6);
-  border: 3px solid var(--main);
-  transition: transform .45s cubic-bezier(.2, 1.3, .4, 1);
+  border-radius: 30px;
+  box-shadow: 0 30px 80px -20px rgba(36, 69, 58, .6);
+  border: 4px solid var(--main);
+  opacity: 0;
+  pointer-events: none;           /* bubbles behind stay clickable while hidden */
+  transform: translate(-50%, -44%) scale(.85);
+  transition: transform .4s cubic-bezier(.2, 1.3, .4, 1), opacity .25s;
 }
-.message.show { transform: translate(-50%, 0); }
-.message .msg-emoji { font-size: 2.6rem; line-height: 1; flex: none; }
-.message p { font-size: 1.12rem; font-weight: 500; line-height: 1.45; }
+.message.show { opacity: 1; pointer-events: auto; transform: translate(-50%, -50%) scale(1); }
+.message .msg-emoji { font-size: 3.2rem; line-height: 1; flex: none; }
+.message .msg-text {
+  font-size: clamp(1.3rem, 3.8vw, 1.65rem);
+  font-weight: 500;
+  line-height: 1.45;
+}
+.message .signature {
+  align-self: flex-end;           /* bottom right corner, like a signature */
+  text-align: right;
+  margin-top: 6px;
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--main);             /* brand green #72c6a8 */
+}
+.message .signature:empty { display: none; }
 .message .close {
   position: absolute;
-  top: 10px; right: 10px;
-  width: 36px; height: 36px;
+  top: 12px; right: 12px;
+  width: 38px; height: 38px;
   border: 0;
   border-radius: 50%;
   background: var(--main-3);
@@ -465,7 +484,7 @@ body.bubbles-page { overflow: hidden; height: 100vh; height: 100dvh; }
   cursor: pointer;
 }
 .message .close:hover { background: var(--gold-soft); }
-.message.swap p, .message.swap .msg-emoji { animation: popIn .4s both; }
+.message.swap .msg-text, .message.swap .msg-emoji, .message.swap .signature { animation: popIn .4s both; }
 
 @media (prefers-reduced-motion: reduce) {
   .dots span, .bubble .inner { animation: none; }

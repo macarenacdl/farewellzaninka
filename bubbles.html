@@ -29,7 +29,8 @@
 
   <aside class="message" id="message" role="status" aria-live="polite">
     <span class="msg-emoji" id="msgEmoji">💚</span>
-    <p id="msgText"></p>
+    <p class="msg-text" id="msgText"></p>
+    <p class="signature" id="msgSign"></p>
     <button class="close" id="msgClose" aria-label="Close message">✕</button>
   </aside>
 
@@ -37,6 +38,7 @@
     const field   = document.getElementById("field");
     const box     = document.getElementById("message");
     const msgText = document.getElementById("msgText");
+    const msgSign = document.getElementById("msgSign");
     const msgEmo  = document.getElementById("msgEmoji");
     const counter = document.getElementById("counter");
 
@@ -47,7 +49,7 @@
     const pick = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
     /* ---- Messages: a different one every click, no repeats until all were shown ---- */
-    let MESSAGES = ["Thank you for everything, Zaninka! 💚"];   // replaced by the decrypted messages
+    let MESSAGES = [{ t: "Thank you for everything, Zaninka! 💚", s: "" }];   // replaced by the decrypted messages
     let queue = [];
     let last = null;
     const seen = new Set();
@@ -69,15 +71,16 @@
     }
 
     let hideTimer;
-    function showMessage(text, emoji) {
+    function showMessage(msg, emoji) {
       box.classList.remove("swap");
       void box.offsetWidth;
-      msgText.textContent = text;
+      msgText.textContent = msg.t;
+      msgSign.textContent = msg.s || "";      // empty signature → hidden
       msgEmo.textContent = emoji;
       box.classList.add("show", "swap");
       updateCounter();
       clearTimeout(hideTimer);
-      hideTimer = setTimeout(() => box.classList.remove("show"), 14000);
+      hideTimer = setTimeout(() => box.classList.remove("show"), 25000);
     }
     document.getElementById("msgClose").addEventListener("click", () => box.classList.remove("show"));
 
@@ -134,7 +137,10 @@
     (async () => {
       const session = await ZK.requireSession();
       if (!session) return;
-      if (session.manifest.messages && session.manifest.messages.length) MESSAGES = session.manifest.messages;
+      const list = (session.manifest.messages || [])
+        .map((m) => typeof m === "string" ? { t: m, s: "" } : m)   // also accepts the older plain-text format
+        .filter((m) => m && m.t);
+      if (list.length) MESSAGES = list;
       const count = window.innerWidth < 600 ? 9 : 15;
       for (let i = 0; i < count; i++) spawn(true);
     })();
